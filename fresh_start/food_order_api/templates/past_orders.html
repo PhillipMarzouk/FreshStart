@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+    <h1>Past Orders</h1>
+
+    {% if not past_orders %}
+        <p>You have no past orders.</p>
+    {% else %}
+        <div class="orders-container">
+            {% for order in past_orders %}
+                <div class="order-card">
+                    <div class="order-header">
+                        <h3>Order #{{ order.id }}</h3>
+                        <span class="order-status {{ order.status|lower }}">{{ order.get_status_display }}</span>
+                    </div>
+
+                    <p><strong>Order Date:</strong> {{ order.created_at|date:"F j, Y" }}</p>
+
+                    <ul class="order-items">
+                        {% for order_item in order.order_items.all %}  <!-- ✅ FIXED -->
+                            <li>
+                                <div class="item-info">
+                                    {% if order_item.menu_item.image %}
+                                        <img src="{{ order_item.menu_item.image.url }}" alt="{{ order_item.menu_item.plate_name }}" class="item-image">
+                                    {% else %}
+                                        <img src="{% static 'images/placeholder.png' %}" alt="No Image" class="item-image">
+                                    {% endif %}
+                                    <div class="item-details">
+                                        <h4>{{ order_item.menu_item.plate_name }}</h4>
+                                        <p>
+                                            <strong>Type:</strong> {{ order_item.menu_item.meal_type }}
+                                            <br />
+                                            <strong>Includes:</strong> 
+                                                {% for portion in order_item.menu_item.plate_portions.all %}
+                                                    {{ portion.name }}{% if not forloop.last %}, {% endif %}
+                                                {% empty %}
+                                                    No portions specified.
+                                                {% endfor %}
+                                            <br />
+                                            <strong>Quantity:</strong> {{ order_item.quantity }}  <!-- ✅ FIXED -->
+                                        </p>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+{% endblock %}

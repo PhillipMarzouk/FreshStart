@@ -1,0 +1,60 @@
+/* Match the front-end color scheme */
+:root {
+    --primary-color: #72bc0a;  /* Fresh Start Green */
+    --secondary-color: #953d21; /* Fresh Start Brown */
+    --tirciary-color: #f5f5f5;  /* Fresh Start Light Gray */
+    --button-bg: #72bc0a; 
+    --default-button-hover-bg: #72bc0a;
+    --default-button-bg: #5a9708;
+    --button-hover-bg: #5a9708;
+}
+
+html[data-theme="light"], :root {
+    --selected-row: #FFC;
+}
+
+html[data-theme="dark"], :root {
+    --selected-row: #953d21;
+}
+
+a:link, a:visited {
+    color: var(--primary-color);
+}
+
+/* Custom logo inside admin panel */
+#header .logo {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+}
+
+#header {
+    background: var(--primary-color);
+    color: var(--tirciary-color);
+}
+
+.theme-toggle svg.theme-icon-when-auto, .theme-toggle svg.theme-icon-when-dark, .theme-toggle svg.theme-icon-when-light {
+    color: var(--primary-color);
+}
+
+div.breadcrumbs {
+    background: var(--secondary-color);
+    color: var(--tirciary-color);
+}
+
+/* Update admin title */
+#header .site-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--header-color);
+}
+
+.module h2, .module caption, .inline-group h2 {
+    margin: 0;
+    padding: 8px;
+    font-weight: 400;
+    font-size: 0.8125rem;
+    text-align: left;
+    background: var(--primary-color);
+    color: var(--header-link-color);
+}

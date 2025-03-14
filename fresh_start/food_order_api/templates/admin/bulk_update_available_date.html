@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h1>Bulk Update Available Date</h1>
+  <p>Select a new available date for the selected menu items:</p>
+  
+  <ul>
+    {% for item in items %}
+      <li>{{ item.plate_name }}</li>
+      <input type="hidden" name="_selected_action" value="{{ item.pk }}">  
+    {% endfor %}
+  </ul>
+
+  <form method="POST" action="">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="bulk_update_available_date">  
+    <label for="available_date">New Available Date:</label>
+    <input type="date" name="available_date" required>
+    <br><br>
+    <input type="hidden" name="apply" value="1">
+    <button type="submit">Update</button>
+  </form>
+
+  <br>
+  <a href="{{ request.META.HTTP_REFERER }}">Cancel</a>
+{% endblock %}

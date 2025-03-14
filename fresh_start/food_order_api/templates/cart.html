@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Cart{% endblock %}
+
+{% block content %}
+    <h1>My Cart</h1>
+
+    {% if grouped_cart_items %}
+        <form method="POST" action="{% url 'cart' %}">
+            {% csrf_token %}
+
+            {% for order_date, cart_items in grouped_cart_items.items %}
+                <strong>{{ order_date|date:"F j, Y" }}</strong> <!-- ✅ Display Date -->
+
+                <ul class="menu-list">
+                    {% for cart in cart_items %}
+                        <li class="menu-item" data-date="{{ order_date|date:'Y-m-d' }}" data-portions="{% for portion in cart.menu_item.plate_portions.all %}{{ portion.name }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                            {% if cart.menu_item.image %}
+                                <img src="{{ cart.menu_item.image.url }}" alt="{{ cart.menu_item.plate_name }}" class="meal-image">
+                            {% else %}
+                                <img src="{% static 'images/placeholder.png' %}" alt="No Image Available" class="meal-image">
+                            {% endif %}
+
+                            <div class="meal-info">
+                                <h3>{{ cart.menu_item.plate_name }}</h3>
+
+                                <!-- NEW Badge -->
+                                {% if cart.menu_item.is_new %}
+                                    <span class="new-badge">NEW</span>
+                                {% endif %}
+                                
+                                <p><strong>Type:</strong> {{ cart.menu_item.meal_type }}</p>
+
+                                <p><strong>Includes:</strong> 
+                                    {% for portion in cart.menu_item.plate_portions.all %}
+                                        {{ portion.name }}{% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                        No portions specified.
+                                    {% endfor %}
+                                </p>
+
+                                <!-- Quantity Selector -->
+                                <label for="quantity_{{ cart.id }}">Quantity:</label>
+                                <input type="number" class="quantity-selector" name="quantity_{{ cart.id }}" id="quantity_{{ cart.id }}" value="{{ cart.quantity }}" min="1">
+
+                                <!-- Remove Item Link -->
+                                <a href="{% url 'remove_from_cart' cart.id %}" class="remove-btn">Remove</a>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endfor %}
+
+            <!-- Update Cart Button -->
+            <button type="submit" class="update-cart-button">Update Cart</button>
+        </form>
+
+        <!-- Checkout Button -->
+        <form method="POST" action="{% url 'checkout' %}">
+            {% csrf_token %}
+            <button type="submit" class="checkout-button">Checkout</button>
+        </form>
+        
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("🔹 Checkout validation script loaded"); // ✅ Debugging log
+
+            const checkoutForm = document.querySelector("form[action='{% url 'checkout' %}']");
+            
+            if (!checkoutForm) {
+                console.error("❌ Checkout form not found!");
+                return;
+            }
+
+            checkoutForm.addEventListener("submit", function (event) {
+                console.log("🔹 Checkout form submitted"); // ✅ Debugging log
+
+                let cartByDate = {};
+
+                document.querySelectorAll(".menu-item").forEach(item => {
+                    let date = item.getAttribute("data-date");
+                    let portions = item.getAttribute("data-portions") ? item.getAttribute("data-portions").split(",") : [];
+                    let quantityInput = item.querySelector(".quantity-selector");
+
+                    if (!quantityInput) {
+                        console.error(`❌ No quantity input found for item ${item}`);
+                        return;
+                    }
+
+                    let quantity = parseInt(quantityInput.value) || 0;
+
+                    if (!cartByDate[date]) {
+                        cartByDate[date] = { Protein: 0, Grain: 0, Vegetable: 0, Fruit: 0 };
+                    }
+
+                    if (quantity > 0) {
+                        portions.forEach(portion => {
+                            if (cartByDate[date][portion] !== undefined) {
+                                cartByDate[date][portion] += 1;
+                            }
+                        });
+                    }
+                });
+
+                console.log("🔹 Processed Cart Data:", cartByDate); // ✅ Debugging log
+
+                for (let date in cartByDate) {
+                    let portions = cartByDate[date];
+                    console.log(`🔹 Checking portions for ${date}:`, portions);
+
+                    if (portions.Protein === 0 || portions.Grain === 0 || portions.Vegetable === 0 || portions.Fruit === 0) {
+                        alert(`Your order for ${date} must include at least one Protein, Grain, Vegetable, and Fruit.`);
+                        event.preventDefault();  // ✅ Stop form submission
+                        return;
+                    }
+                }
+
+                console.log("✅ Order passes validation. Proceeding to checkout.");
+            });
+        });
+
+
+    </script>
+
+{% endblock %}

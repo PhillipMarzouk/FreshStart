@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Account{% endblock %}
+
+{% block content %}
+    <h1>Account Settings</h1>
+
+    <!-- User Information -->
+    <div class="account-info">
+        <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Account Type:</strong> {{ user.is_staff|yesno:"Admin,Customer" }}</p>
+        <p><strong>Member Since:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+    </div>
+
+    <!-- Update Profile -->
+    <h2>Update Profile</h2>
+    <form method="POST" action="{% url 'update_profile' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <!-- Change Password -->
+    <h2>Change Password</h2>
+    <form method="POST" action="{% url 'change_password' %}">
+        {% csrf_token %}
+        {{ password_form.as_p }}
+        <button type="submit">Change Password</button>
+    </form>
+
+    <!-- Order History -->
+    <a href="{% url 'past_orders' %}" class="order-history-btn">View Past Orders</a>
+
+    <!-- Logout -->
+    <form method="POST" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">Logout</button>
+    </form>
+{% endblock %}
