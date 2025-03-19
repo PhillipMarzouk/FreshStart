@@ -1,14 +1,15 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, serializers, viewsets
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from .models import MenuItem, UserOrder
 from .serializers import UserOrderSerializer
 from django.utils.dateparse import parse_date
+from django.utils.timezone import now
 from django.http import JsonResponse
 
 from rest_framework import generics, permissions, status, serializers
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import status
@@ -16,10 +17,10 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib import messages
-from .serializers import CartSerializer, UserSerializer
+from .serializers import UserOrderSerializer, MenuItemSerializer, CartSerializer, UserSerializer
 
 from django.contrib.auth import logout
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import update_session_auth_hash, logout, authenticate, login
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect, get_object_or_404
@@ -27,9 +28,12 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
 from rest_framework.views import View
-from .models import Cart, UserOrder, MenuItem, MenuDate, LunchProgram, OrderItem
+from .models import Cart, UserOrder, MenuItem, MenuDate, LunchProgram, OrderItem, UserProfile
+from calendar import monthrange
 from datetime import date, timedelta, datetime
 from .forms import UpdateProfileForm
+
+
 
 
 class RegisterView(APIView):
@@ -81,10 +85,10 @@ class OrderCreateAPIView(generics.CreateAPIView):
         serializer.save(user=self.request.user, items=items)
         user_cart.delete()
 
-# 
+#
 # ---------------
 # ***************
-# 
+#
 # NEW CODE
 #
 # ***************
@@ -97,48 +101,54 @@ class FoodItemsView(View):
         # Fetch food items from the database
         food_items = FoodItem.objects.all()
         return render(request, 'food_items.html', {'food_items': food_items})
-    
+
 #Homepage View
- 
-#Menu Page View
-class WeeklyMenuView(View):
+
+class MonthlyMenuView(View):
     def get(self, request):
-        selected_program = request.GET.get("program")  # Get the selected lunch program
-        
-        selected_date_str = request.GET.get("date", "")  # Ensure it's a string
-        selected_date = parse_date(selected_date_str)  # Parses date safely
+        user = request.user
+        selected_date_str = request.GET.get("date", "")
+        selected_date = parse_date(selected_date_str) or date.today()
 
-        if not selected_date:  # If parsing fails, use the current week's Monday
-            selected_date = date.today() - timedelta(days=date.today().weekday())
+        # Ensure the month starts on a Monday and ends on a Friday
+        first_day = selected_date.replace(day=1)
+        while first_day.weekday() != 0:  # Move to previous Monday if needed
+            first_day -= timedelta(days=1)
 
-        # Get the full week range (Monday to Sunday)
-        week_dates = [selected_date + timedelta(days=i) for i in range(7)]
-        
-        # Fetch menu items for each day in the week
-        weekly_menu = {}
-        for single_date in week_dates:
-            menu_items = MenuItem.objects.filter(available_date=single_date)  # ✅ FIXED
+        last_day = selected_date.replace(day=1) + timedelta(days=32)
+        last_day = last_day.replace(day=1) - timedelta(days=1)
+        while last_day.weekday() != 4:  # Move to next Friday if needed
+            last_day += timedelta(days=1)
 
-            # Apply lunch program filter if selected
-            if selected_program:
-                menu_items = menu_items.filter(lunch_programs__name=selected_program)
+        month_dates = [first_day + timedelta(days=i) for i in range((last_day - first_day).days + 1)]
+        menu_items_by_date = {}
 
-            weekly_menu[single_date] = menu_items  # Store in dictionary
+        # Fetch user's assigned lunch programs
+        try:
+            user_lunch_programs = user.userprofile.lunch_programs.all()
+        except UserProfile.DoesNotExist:
+            user_lunch_programs = None
 
-        # Get next and previous week dates
-        prev_week = selected_date - timedelta(days=7)
-        next_week = selected_date + timedelta(days=7)
+        for single_date in month_dates:
+            menu_items = MenuItem.objects.filter(available_date=single_date)
 
-        # Get all lunch programs for dropdown
-        lunch_programs = LunchProgram.objects.all()
+            # Filter by user's assigned lunch program
+            if user_lunch_programs:
+                menu_items = menu_items.filter(lunch_programs__in=user_lunch_programs).distinct()
+            else:
+                menu_items = MenuItem.objects.none()  # No lunch program assigned
+
+            menu_items_by_date[single_date] = menu_items
+
+        # 🔹 Corrected `prev_month` and `next_month` logic
+        prev_month = (selected_date.replace(day=1) - timedelta(days=1)).replace(day=1)
+        next_month = (selected_date.replace(day=28) + timedelta(days=4)).replace(day=1)
 
         return render(request, "menu.html", {
-            "weekly_menu": weekly_menu,
-            "selected_week": selected_date,
-            "prev_week": prev_week,
-            "next_week": next_week,
-            "lunch_programs": lunch_programs,
-            "selected_program": selected_program,
+            "menu_items_by_date": menu_items_by_date,
+            "selected_month": selected_date,
+            "prev_month": prev_month,
+            "next_month": next_month,  # ✅ Fixed next_month calculation
         })
 
 
@@ -158,43 +168,51 @@ def login_view(request):
 # New Order Page
 class NewOrderView(View):
     def get(self, request):
-        selected_program = request.GET.get("program")  # Get the selected lunch program
-        
-        selected_date_str = request.GET.get("date", "")  # Ensure it's a string
-        selected_date = parse_date(selected_date_str)  # Parses date safely
+        user = request.user
+        selected_date_str = request.GET.get("date", "")
+        selected_date = parse_date(selected_date_str) or date.today()
 
-        if not selected_date:  # If parsing fails, use the current week's Monday
-            selected_date = date.today() - timedelta(days=date.today().weekday())
+        # Ensure month starts on a Monday and ends on a Friday
+        first_day = selected_date.replace(day=1)
+        while first_day.weekday() != 0:  # Move to previous Monday if needed
+            first_day -= timedelta(days=1)
 
-        # Get the full week range (Monday to Sunday)
-        week_dates = [selected_date + timedelta(days=i) for i in range(7)]
-        
-        # Fetch menu items for each day in the week
-        weekly_menu = {}
-        for single_date in week_dates:
+        last_day = selected_date.replace(day=1) + timedelta(days=32)
+        last_day = last_day.replace(day=1) - timedelta(days=1)
+        while last_day.weekday() != 4:  # Move to next Friday if needed
+            last_day += timedelta(days=1)
+
+        month_dates = [first_day + timedelta(days=i) for i in range((last_day - first_day).days + 1)]
+        menu_items_by_date = {}
+
+        # Fetch user's assigned lunch programs
+        try:
+            user_lunch_programs = user.userprofile.lunch_programs.all()
+        except UserProfile.DoesNotExist:
+            user_lunch_programs = None
+
+        for single_date in month_dates:
             menu_items = MenuItem.objects.filter(available_date=single_date)
 
-            # Apply lunch program filter if selected
-            if selected_program:
-                menu_items = menu_items.filter(lunch_programs__name=selected_program)
+            # Filter by user's assigned lunch program
+            if user_lunch_programs:
+                menu_items = menu_items.filter(lunch_programs__in=user_lunch_programs).distinct()
+            else:
+                menu_items = MenuItem.objects.none()  # No lunch program assigned
 
-            weekly_menu[single_date] = menu_items  # Store in dictionary
+            menu_items_by_date[single_date] = menu_items
 
-        # Get next and previous week dates
-        prev_week = selected_date - timedelta(days=7)
-        next_week = selected_date + timedelta(days=7)
-
-        # Get all lunch programs for dropdown
-        lunch_programs = LunchProgram.objects.all()
+        # 🔹 Fix: Properly calculate `prev_month` and `next_month`
+        prev_month = (selected_date.replace(day=1) - timedelta(days=1)).replace(day=1)
+        next_month = (selected_date.replace(day=28) + timedelta(days=4)).replace(day=1)
 
         return render(request, "new_order.html", {
-            "weekly_menu": weekly_menu,
-            "selected_week": selected_date,
-            "prev_week": prev_week,
-            "next_week": next_week,
-            "lunch_programs": lunch_programs,
-            "selected_program": selected_program,
+            "menu_items_by_date": menu_items_by_date,  # ✅ Fix: Now it matches `menu.html`
+            "selected_month": selected_date,
+            "prev_month": prev_month,
+            "next_month": next_month,  # ✅ Fixed next_month calculation
         })
+
 
     def post(self, request):
         selected_items = request.POST.getlist("menu_items[]")  # ✅ Use getlist()
@@ -246,6 +264,22 @@ class NewOrderView(View):
                 continue  # Skip if menu item doesn't exist
 
         return required_categories.issubset(selected_categories)
+
+
+class MenuItemViewSet(viewsets.ModelViewSet):
+    serializer_class = MenuItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        try:
+            lunch_program = user.userprofile.lunch_program
+            if lunch_program:
+                return MenuItem.objects.filter(lunch_programs=lunch_program)
+        except UserProfile.DoesNotExist:
+            return MenuItem.objects.none()  # No lunch program assigned
+
+        return MenuItem.objects.all()
 
 # Cart Page
 class CartView(View):
@@ -321,13 +355,13 @@ class CheckoutView(View):
                     cart_by_date[order_date][portion.name] += 1
 
         # ✅ Check if each date meets the requirement
-        for order_date, portions in cart_by_date.items():
-            if any(count == 0 for count in portions.values()):  # If any category is missing
-                messages.error(
-                    request,
-                    f"Your order for {order_date.strftime('%B %d, %Y')} must include at least one Protein, Grain, Vegetable, and Fruit."
-                )
-                return redirect("cart")
+        #for order_date, portions in cart_by_date.items():
+        #    if any(count == 0 for count in portions.values()):  # If any category is missing
+        #        messages.error(
+        #            request,
+        #            f"Your order for {order_date.strftime('%B %d, %Y')} must include at least one Protein, Grain, Vegetable, and Fruit."
+        #        )
+        #        return redirect("cart")
 
         # ✅ Create an order
         order = UserOrder.objects.create(user=request.user, status="Pending")
@@ -357,6 +391,21 @@ class PastOrdersView(View):
         return render(request, "past_orders.html", {
             "past_orders": past_orders
         })
+
+
+
+def menu_item_clone_view(request, pk):
+    """Clone an existing menu item."""
+    original = get_object_or_404(MenuItem, pk=pk)
+    clone = MenuItem.objects.create(
+        plate_name=f"{original.plate_name} (Copy)",
+        meal_type=original.meal_type,
+        is_new=True,  # Mark cloned items as new
+        available_date=original.available_date,
+        image=original.image
+    )
+    return redirect("admin:food_order_api_menuitem_change", clone.pk)
+
 
 
 class HomeView(View):

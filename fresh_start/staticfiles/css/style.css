@@ -1,4 +1,4 @@
-/* 
+/*
     --------------
     Main Style Sheet
     --------------
@@ -35,7 +35,7 @@
     margin-left: 60px !important;
 }
 
-/* When Sidebar is Collapsed 
+/* When Sidebar is Collapsed
 .sidebar.collapsed + .main-content {
     margin-left: 60px;
 }*/
@@ -171,7 +171,7 @@
 }
 
 
-/* 
+/*
     --------------
     Menu Styling
     --------------
@@ -239,7 +239,7 @@
     color: white;
 }
 
-.week-navigation {
+.month-navigation {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -254,7 +254,7 @@ button.checkout-button {
 
 .nav-button { display: block;}
 
-.nav-button, .add-to-cart-button, 
+.nav-button, .add-to-cart-button,
 .update-cart-button, .checkout-button,
 .previous-week, .next-week {
     background-color: #72bc0a;
@@ -265,7 +265,7 @@ button.checkout-button {
     font-weight: bold;
 }
 
-.nav-button:hover, .add-to-cart-button:hover, 
+.nav-button:hover, .add-to-cart-button:hover,
 .update-cart-button:hover, .checkout-button:hover,
 .previous-week:hover, .next-week:hover {
     background-color: #5a9708;
@@ -322,7 +322,7 @@ button.checkout-button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-} 
+}
 
 /* Arrow icon */
 .dropdown-toggle .arrow {
@@ -540,6 +540,48 @@ body.login-page .main-content {
 .login-container {
     max-width: 400px;
     width: 100%;
+}
+
+
+/* ------------------ */
+/**********************/
+
+/*  Add To Cart Button  */
+
+/**********************/
+/* ------------------ */
+
+.cart-button-wrapper {
+    width: 100%;
+    background: #FFFFFF;
+    display: block;
+    height: 100px;
+    position: fixed;
+    bottom: 0;
+}
+
+.add-to-cart-button {
+    position: fixed;
+    bottom: 20px; /* Stick 20px above the bottom */
+    left: 80px; /* Align to the left on large screens */
+    min-width: 160px;
+    color: white;
+    padding: 15px 25px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Center the button on screens 1024px and below */
+@media (max-width: 1024px) {
+    .add-to-cart-button {
+        right: 50%;
+        transform: translateX(50%);
+    }
 }
 
 /* ------------------ */

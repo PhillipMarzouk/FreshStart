@@ -1,4 +1,4 @@
-/* 
+/*
     --------------
     Main Style Sheet
     --------------
@@ -35,7 +35,7 @@
     margin-left: 60px !important;
 }
 
-/* When Sidebar is Collapsed 
+/* When Sidebar is Collapsed
 .sidebar.collapsed + .main-content {
     margin-left: 60px;
 }*/
@@ -171,7 +171,7 @@
 }
 
 
-/* 
+/*
     --------------
     Menu Styling
     --------------
@@ -239,7 +239,7 @@
     color: white;
 }
 
-.week-navigation {
+.month-navigation {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -254,7 +254,7 @@ button.checkout-button {
 
 .nav-button { display: block;}
 
-.nav-button, .add-to-cart-button, 
+.nav-button, .add-to-cart-button,
 .update-cart-button, .checkout-button,
 .previous-week, .next-week {
     background-color: #72bc0a;
@@ -265,7 +265,7 @@ button.checkout-button {
     font-weight: bold;
 }
 
-.nav-button:hover, .add-to-cart-button:hover, 
+.nav-button:hover, .add-to-cart-button:hover,
 .update-cart-button:hover, .checkout-button:hover,
 .previous-week:hover, .next-week:hover {
     background-color: #5a9708;
@@ -322,7 +322,7 @@ button.checkout-button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-} 
+}
 
 /* Arrow icon */
 .dropdown-toggle .arrow {

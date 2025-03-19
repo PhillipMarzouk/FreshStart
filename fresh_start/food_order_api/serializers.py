@@ -52,14 +52,14 @@ class CartSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         menu_item = validated_data['menu_item']  # ✅ Use MenuItem instead
         quantity = validated_data['quantity']
-        
+
         # ✅ Ensure item is unique per user
         cart, created = Cart.objects.get_or_create(user=user, menu_item=menu_item, defaults={'quantity': quantity})
-        
+
         if not created:
             cart.quantity += quantity  # ✅ If already in cart, increase quantity
             cart.save()
-        
+
         return cart
 
 
@@ -76,4 +76,9 @@ class UserOrderSerializer(serializers.ModelSerializer):
         for item_data in items_data:
             order.items.add(item_data)
         return order
+
+class MenuItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MenuItem
+        fields = '__all__'
 

@@ -29,10 +29,10 @@
                                 {% if cart.menu_item.is_new %}
                                     <span class="new-badge">NEW</span>
                                 {% endif %}
-                                
+
                                 <p><strong>Type:</strong> {{ cart.menu_item.meal_type }}</p>
 
-                                <p><strong>Includes:</strong> 
+                                <p><strong>Includes:</strong>
                                     {% for portion in cart.menu_item.plate_portions.all %}
                                         {{ portion.name }}{% if not forloop.last %}, {% endif %}
                                     {% empty %}
@@ -61,18 +61,18 @@
             {% csrf_token %}
             <button type="submit" class="checkout-button">Checkout</button>
         </form>
-        
+
     {% else %}
         <p>Your cart is empty.</p>
     {% endif %}
 
-    <script>
+    <!-- script>
 
         document.addEventListener("DOMContentLoaded", function () {
             console.log("🔹 Checkout validation script loaded"); // ✅ Debugging log
 
             const checkoutForm = document.querySelector("form[action='{% url 'checkout' %}']");
-            
+
             if (!checkoutForm) {
                 console.error("❌ Checkout form not found!");
                 return;
@@ -126,6 +126,6 @@
         });
 
 
-    </script>
+    </script -->
 
 {% endblock %}
