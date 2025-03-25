@@ -551,6 +551,10 @@ button.checkout-button {
     text-decoration: underline;
 }
 
+body.login-page #school-select, body.login-page hr {
+    display:none;
+}
+
 body.login-page {
     display: flex;
     justify-content: center;

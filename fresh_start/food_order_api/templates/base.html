@@ -77,15 +77,19 @@
     <div class="main-content">
 
         <select id="school-select" name="selected_school">
-            <option value="" disabled {% if not request.session.selected_school %}selected{% endif %}>Select a School</option>
-            {% for school in request.user.schools.all %}
-                <option value="{{ school.id }}"
-                    {% if school.id|stringformat:"s" == request.session.selected_school|stringformat:"s" %}selected{% endif %}>
-                    {{ school.name }}
-                </option>
-            {% endfor %}
+            {% with user_schools=request.user.schools.all %}
+                {% if user_schools %}
+                    {% for school in user_schools %}
+                        <option value="{{ school.id }}"
+                            {% if school.id|stringformat:"s" == request.session.selected_school|stringformat:"s" or forloop.first and not request.session.selected_school %}selected{% endif %}>
+                            {{ school.name }}
+                        </option>
+                    {% endfor %}
+                {% else %}
+                    <option value="" disabled selected>Select a School</option>
+                {% endif %}
+            {% endwith %}
         </select>
-
 
         <script>
         document.getElementById("school-select").addEventListener("change", function () {
@@ -109,7 +113,6 @@
             });
         });
         </script>
-
 
         <hr>
 

@@ -1,5 +1,6 @@
 from django.shortcuts import redirect
 from django.conf import settings
+from .models import School
 
 EXEMPT_PATHS = [
     settings.LOGIN_URL,
@@ -25,4 +26,17 @@ class LoginRequiredMiddleware:
         if not request.user.is_authenticated:
             return redirect(settings.LOGIN_URL)
 
+        return self.get_response(request)
+
+
+class AutoSelectSchoolMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            if "selected_school" not in request.session:
+                schools = School.objects.filter(users=request.user)
+                if schools.exists():
+                    request.session["selected_school"] = schools.first().id
         return self.get_response(request)

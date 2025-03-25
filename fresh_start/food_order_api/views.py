@@ -51,7 +51,7 @@ from .models import (
     Cart, UserOrder, MenuItem,
     MenuDate, LunchProgram, OrderItem,
     CustomerSupportProfile, UserProfile,
-    CustomUser
+    CustomUser, School
 )
 from food_order_api.models import School
 from datetime import date, timedelta, datetime
@@ -138,8 +138,14 @@ class MonthlyMenuView(View):
         # ✅ Ensure a school is selected
         school_id = request.session.get("selected_school")
         if not school_id:
-            messages.error(request, "Please select a school first.")
-            return redirect("dashboard")
+            schools = School.objects.filter(users=request.user)
+            if schools.exists():
+                school_id = schools.first().id
+                request.session["selected_school"] = school_id
+            else:
+                messages.error(request, "No schools available.")
+                return redirect("dashboard")
+
 
         school = get_object_or_404(School, id=school_id, users=user)
         school_lunch_programs = school.lunch_programs.all()
@@ -227,8 +233,14 @@ class NewOrderView(View):
         # ✅ Ensure school is selected
         school_id = request.session.get("selected_school")
         if not school_id:
-            messages.error(request, "Please select a school first.")
-            return redirect("dashboard")
+            schools = School.objects.filter(users=request.user)
+            if schools.exists():
+                school_id = schools.first().id
+                request.session["selected_school"] = school_id
+            else:
+                messages.error(request, "No schools available.")
+                return redirect("dashboard")
+
 
         school = get_object_or_404(School, id=school_id, users=request.user)
         school_lunch_programs = school.lunch_programs.all()
@@ -574,6 +586,27 @@ def set_selected_school(request):
             return JsonResponse({"success": False, "error": "Invalid school selection."}, status=400)
 
     return JsonResponse({"success": False, "error": "Invalid request method."}, status=400)
+
+
+@login_required
+def set_selected_school(request):
+    if request.method == "POST":
+        school_id = request.POST.get("school_id") or request.POST.get("selected_school")
+        try:
+            school = School.objects.get(id=school_id, users=request.user)
+            request.session["selected_school"] = school.id
+            return JsonResponse({"success": True, "selected_school": school.name})
+        except School.DoesNotExist:
+            return JsonResponse({"success": False, "error": "Invalid school selection."}, status=400)
+
+    # ✅ Fallback: If no school is selected, auto-select the first one (for non-POST requests)
+    if not request.session.get("selected_school"):
+        schools = School.objects.filter(users=request.user)
+        if schools.exists():
+            request.session["selected_school"] = schools.first().id
+
+    return JsonResponse({"success": False, "error": "Invalid request method."}, status=400)
+
 
 @login_required
 def export_menu_calendar(request):
