@@ -1,3 +1,22 @@
+import calendar
+import io
+import sys
+import json
+
+from reportlab.lib.pagesizes import landscape, letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from django.contrib.staticfiles import finders
+from reportlab.lib import colors
+from textwrap import wrap
+from django.conf import settings
+
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.contrib.sites.shortcuts import get_current_site
+from utils.sendpulse import SendPulseAPI
+
 from rest_framework import generics, permissions, status, serializers, viewsets
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
@@ -5,8 +24,8 @@ from django.contrib.auth.models import User
 from .models import MenuItem, UserOrder
 from .serializers import UserOrderSerializer
 from django.utils.dateparse import parse_date
-from django.utils.timezone import now
-from django.http import JsonResponse
+from django.utils.timezone import now, localdate
+from django.http import JsonResponse, HttpResponse
 
 from rest_framework import generics, permissions, status, serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -28,10 +47,16 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
 from rest_framework.views import View
-from .models import Cart, UserOrder, MenuItem, MenuDate, LunchProgram, OrderItem, UserProfile
-from calendar import monthrange
+from .models import (
+    Cart, UserOrder, MenuItem,
+    MenuDate, LunchProgram, OrderItem,
+    CustomerSupportProfile, UserProfile,
+    CustomUser
+)
+from food_order_api.models import School
 from datetime import date, timedelta, datetime
 from .forms import UpdateProfileForm
+from collections import defaultdict
 
 
 
@@ -110,37 +135,35 @@ class MonthlyMenuView(View):
         selected_date_str = request.GET.get("date", "")
         selected_date = parse_date(selected_date_str) or date.today()
 
-        # Ensure the month starts on a Monday and ends on a Friday
+        # ✅ Ensure a school is selected
+        school_id = request.session.get("selected_school")
+        if not school_id:
+            messages.error(request, "Please select a school first.")
+            return redirect("dashboard")
+
+        school = get_object_or_404(School, id=school_id, users=user)
+        school_lunch_programs = school.lunch_programs.all()
+
+        # ✅ Build date range for full calendar month (Mon–Fri)
         first_day = selected_date.replace(day=1)
-        while first_day.weekday() != 0:  # Move to previous Monday if needed
+        while first_day.weekday() != 0:
             first_day -= timedelta(days=1)
 
         last_day = selected_date.replace(day=1) + timedelta(days=32)
         last_day = last_day.replace(day=1) - timedelta(days=1)
-        while last_day.weekday() != 4:  # Move to next Friday if needed
+        while last_day.weekday() != 4:
             last_day += timedelta(days=1)
 
         month_dates = [first_day + timedelta(days=i) for i in range((last_day - first_day).days + 1)]
         menu_items_by_date = {}
 
-        # Fetch user's assigned lunch programs
-        try:
-            user_lunch_programs = user.userprofile.lunch_programs.all()
-        except UserProfile.DoesNotExist:
-            user_lunch_programs = None
-
         for single_date in month_dates:
-            menu_items = MenuItem.objects.filter(available_date=single_date)
-
-            # Filter by user's assigned lunch program
-            if user_lunch_programs:
-                menu_items = menu_items.filter(lunch_programs__in=user_lunch_programs).distinct()
-            else:
-                menu_items = MenuItem.objects.none()  # No lunch program assigned
-
+            menu_items = MenuItem.objects.filter(
+                available_date=single_date,
+                lunch_programs__in=school_lunch_programs
+            ).distinct()
             menu_items_by_date[single_date] = menu_items
 
-        # 🔹 Corrected `prev_month` and `next_month` logic
         prev_month = (selected_date.replace(day=1) - timedelta(days=1)).replace(day=1)
         next_month = (selected_date.replace(day=28) + timedelta(days=4)).replace(day=1)
 
@@ -148,9 +171,38 @@ class MonthlyMenuView(View):
             "menu_items_by_date": menu_items_by_date,
             "selected_month": selected_date,
             "prev_month": prev_month,
-            "next_month": next_month,  # ✅ Fixed next_month calculation
+            "next_month": next_month,
         })
 
+
+import logging
+logger = logging.getLogger(__name__)
+
+def send_password_reset_email(request):
+    if request.method == "POST":
+        email = request.POST.get("email")
+        user = User.objects.filter(email=email).first()
+
+        if user:
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            domain = get_current_site(request).domain
+            reset_link = f"https://{domain}/password-reset-confirm/{uid}/{token}/"
+            first_name = user.first_name if user.first_name else None
+
+            logger.error(f"🔍 DEBUG to_email: {email}")
+            logger.error(f"🔗 DEBUG reset_link: {reset_link}")
+
+            sendpulse = SendPulseAPI()
+            response = sendpulse.send_email(email, reset_link, first_name)
+
+            logger.error(f"📨 SendPulse response: {response}")
+        else:
+            logger.error(f"❌ No user found with email: {email}")
+
+        return redirect("login")
+
+    return render(request, "registration/password_reset_form.html")
 
 # Login Page
 def login_view(request):
@@ -172,46 +224,46 @@ class NewOrderView(View):
         selected_date_str = request.GET.get("date", "")
         selected_date = parse_date(selected_date_str) or date.today()
 
-        # Ensure month starts on a Monday and ends on a Friday
+        # ✅ Ensure school is selected
+        school_id = request.session.get("selected_school")
+        if not school_id:
+            messages.error(request, "Please select a school first.")
+            return redirect("dashboard")
+
+        school = get_object_or_404(School, id=school_id, users=request.user)
+        school_lunch_programs = school.lunch_programs.all()
+
+        # ✅ Build calendar range (Mon–Fri)
         first_day = selected_date.replace(day=1)
-        while first_day.weekday() != 0:  # Move to previous Monday if needed
+        while first_day.weekday() != 0:
             first_day -= timedelta(days=1)
 
         last_day = selected_date.replace(day=1) + timedelta(days=32)
         last_day = last_day.replace(day=1) - timedelta(days=1)
-        while last_day.weekday() != 4:  # Move to next Friday if needed
+        while last_day.weekday() != 4:
             last_day += timedelta(days=1)
 
         month_dates = [first_day + timedelta(days=i) for i in range((last_day - first_day).days + 1)]
         menu_items_by_date = {}
 
-        # Fetch user's assigned lunch programs
-        try:
-            user_lunch_programs = user.userprofile.lunch_programs.all()
-        except UserProfile.DoesNotExist:
-            user_lunch_programs = None
-
         for single_date in month_dates:
-            menu_items = MenuItem.objects.filter(available_date=single_date)
-
-            # Filter by user's assigned lunch program
-            if user_lunch_programs:
-                menu_items = menu_items.filter(lunch_programs__in=user_lunch_programs).distinct()
-            else:
-                menu_items = MenuItem.objects.none()  # No lunch program assigned
-
+            menu_items = MenuItem.objects.filter(
+                available_date=single_date,
+                lunch_programs__in=school_lunch_programs
+            ).distinct()
             menu_items_by_date[single_date] = menu_items
 
-        # 🔹 Fix: Properly calculate `prev_month` and `next_month`
         prev_month = (selected_date.replace(day=1) - timedelta(days=1)).replace(day=1)
         next_month = (selected_date.replace(day=28) + timedelta(days=4)).replace(day=1)
 
         return render(request, "new_order.html", {
-            "menu_items_by_date": menu_items_by_date,  # ✅ Fix: Now it matches `menu.html`
+            "menu_items_by_date": menu_items_by_date,
             "selected_month": selected_date,
             "prev_month": prev_month,
-            "next_month": next_month,  # ✅ Fixed next_month calculation
+            "next_month": next_month,
         })
+
+
 
 
     def post(self, request):
@@ -336,61 +388,82 @@ def update_cart(request):
 #Checkout
 class CheckoutView(View):
     def post(self, request):
-        cart_items = Cart.objects.filter(user=request.user)
+        school_id = request.session.get("selected_school")
+        if not school_id:
+            messages.error(request, "Please select a school before placing an order.")
+            return redirect("cart")
 
+        school = get_object_or_404(School, id=school_id, users=request.user)
+
+        cart_items = Cart.objects.filter(user=request.user)
         if not cart_items.exists():
             messages.error(request, "Your cart is empty. Please add items before checking out.")
             return redirect("cart")
 
-        # ✅ Group items by date
-        cart_by_date = {}
-        for cart_item in cart_items:
-            order_date = cart_item.menu_item.available_date  # ✅ Get menu item date
-            if order_date not in cart_by_date:
-                cart_by_date[order_date] = {"Protein": 0, "Grain": 0, "Vegetable": 0, "Fruit": 0}
-
-            # ✅ Count items in each category
-            for portion in cart_item.menu_item.plate_portions.all():
-                if portion.name in cart_by_date[order_date]:
-                    cart_by_date[order_date][portion.name] += 1
-
-        # ✅ Check if each date meets the requirement
-        #for order_date, portions in cart_by_date.items():
-        #    if any(count == 0 for count in portions.values()):  # If any category is missing
-        #        messages.error(
-        #            request,
-        #            f"Your order for {order_date.strftime('%B %d, %Y')} must include at least one Protein, Grain, Vegetable, and Fruit."
-        #        )
-        #        return redirect("cart")
-
-        # ✅ Create an order
-        order = UserOrder.objects.create(user=request.user, status="Pending")
+        order = UserOrder.objects.create(user=request.user, school=school, status="Pending")
 
         for cart_item in cart_items:
-            # ✅ Ensure menu_item_date is stored correctly
-            menu_item_date = cart_item.menu_item.available_date if cart_item.menu_item.available_date else None
-
             OrderItem.objects.create(
                 order=order,
                 menu_item=cart_item.menu_item,
                 quantity=cart_item.quantity,
-                menu_item_date=menu_item_date  # ✅ Save the date in OrderItem
+                menu_item_date=cart_item.menu_item.available_date
             )
 
-        # ✅ Clear the cart
         cart_items.delete()
+        SendPulseAPI().send_order_notification(order)
 
-        messages.success(request, "Your order has been placed and is now pending.")
+        messages.success(request, f"Your order for {school.name} has been placed and is now pending.")
         return redirect("past_orders")
 
 
 class PastOrdersView(View):
     def get(self, request):
-        past_orders = UserOrder.objects.filter(user=request.user).order_by("-created_at")
+        school_id = request.session.get("selected_school")
+        if not school_id:
+            messages.error(request, "Please select a school to view past orders.")
+            return redirect("home")
+
+        school = get_object_or_404(School, id=school_id, users=request.user)
+        past_orders = UserOrder.objects.filter(user=request.user, school=school).order_by("-created_at")
+
+        orders_with_dates = {}
+
+        for order in past_orders:
+            order_date = order.created_at.date()
+
+            if order.id not in orders_with_dates:
+                orders_with_dates[order.id] = {
+                    "order": order,
+                    "order_date": order_date,
+                    "delivery_groups": {}
+                }
+
+            for order_item in order.order_items.all():
+                consumption_date = order_item.menu_item_date  # ✅ Use saved menu_item_date
+                delivery_date = order_item.delivery_date or consumption_date  # ✅ Fallback if missing
+
+                # ✅ Organize data by delivery → consumption
+                if delivery_date not in orders_with_dates[order.id]["delivery_groups"]:
+                    orders_with_dates[order.id]["delivery_groups"][delivery_date] = {}
+
+                if consumption_date not in orders_with_dates[order.id]["delivery_groups"][delivery_date]:
+                    orders_with_dates[order.id]["delivery_groups"][delivery_date][consumption_date] = []
+
+                orders_with_dates[order.id]["delivery_groups"][delivery_date][consumption_date].append({
+                    "order": order,
+                    "order_date": order_date,
+                    "delivery_date": delivery_date,
+                    "consumption_date": consumption_date,
+                    "order_item": order_item,
+                })
 
         return render(request, "past_orders.html", {
-            "past_orders": past_orders
+            "orders_with_dates": orders_with_dates,
+            "selected_school": school
         })
+
+
 
 
 
@@ -435,15 +508,28 @@ class HomeView(View):
 
 class AccountView(View):
     def get(self, request):
+        """Display the user account page."""
         return render(request, "account.html", {"user": request.user})
 
+
+class CustomerSupportProfileView(View):
+    def get(self, request):
+        support_profiles = CustomerSupportProfile.objects.all()
+        return render(request, "support_profiles.html", {"support_profiles": support_profiles})
+
+
 class UpdateProfileView(View):
+    def get(self, request):
+        form = UpdateProfileForm(instance=request.user)
+        return render(request, "account.html", {"form": form})
+
     def post(self, request):
         form = UpdateProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
             return redirect("account")
         return render(request, "account.html", {"form": form})
+
 
 class ChangePasswordView(View):
     def post(self, request):
@@ -457,4 +543,170 @@ class ChangePasswordView(View):
 
 def logout_view(request):
     logout(request)
-    return redirect('login')  # Redirect to the login page after logout
+    return redirect("login")  # Redirect to the login page after logout
+
+
+
+def get_week_range(year, month):
+    """Find the Monday of the first week and the Friday of the last week of the selected month."""
+    first_day = datetime(year, month, 1)
+    last_day = datetime(year, month, calendar.monthrange(year, month)[1])
+
+    # Move first_day to the Monday of its week
+    first_monday = first_day - timedelta(days=first_day.weekday())
+
+    # Move last_day to the Friday of its week
+    last_friday = last_day + timedelta(days=(4 - last_day.weekday()) % 7)
+
+    return first_monday, last_friday
+
+@login_required
+def set_selected_school(request):
+    if request.method == "POST":
+        school_id = request.POST.get("school_id") or request.POST.get("selected_school")  # ⬅ handle both keys
+        try:
+            print(f"🔍 Attempting to set school ID: {school_id} for user: {request.user}")
+            school = School.objects.get(id=school_id, users=request.user)
+            request.session["selected_school"] = school.id
+            return JsonResponse({"success": True, "selected_school": school.name})
+        except School.DoesNotExist:
+            print("❌ School not found or not linked to this user")
+            return JsonResponse({"success": False, "error": "Invalid school selection."}, status=400)
+
+    return JsonResponse({"success": False, "error": "Invalid request method."}, status=400)
+
+@login_required
+def export_menu_calendar(request):
+    """Generates a weekly PDF calendar with menu items based on consumption date for the selected school."""
+    # ✅ Get selected school from session
+    school_id = request.session.get("selected_school")
+    if not school_id:
+        messages.error(request, "Please select a school before exporting the menu.")
+        return redirect("past_orders")
+
+    school = get_object_or_404(School, id=school_id, users=request.user)
+
+    # ✅ Get selected month and year from request
+    month_year = request.GET.get("month")
+    if not month_year:
+        return HttpResponse("Invalid month selection.", status=400)
+
+    try:
+        selected_date = datetime.strptime(month_year, "%Y-%m")
+        year = selected_date.year
+        month = selected_date.month
+    except ValueError:
+        return HttpResponse("Invalid date format. Expected YYYY-MM.", status=400)
+
+    # ✅ Get first Monday and last Friday of the selected month
+    def get_week_range(year, month):
+        first_day = datetime(year, month, 1)
+        last_day = datetime(year, month, calendar.monthrange(year, month)[1])
+
+        first_monday = first_day - timedelta(days=first_day.weekday())
+        last_friday = last_day + timedelta(days=(4 - last_day.weekday()) % 7)
+
+        return first_monday.date(), last_friday.date()
+
+    first_monday, last_friday = get_week_range(year, month)
+
+    # ✅ Fetch orders **ONLY** for the selected school
+    orders = UserOrder.objects.filter(
+        user=request.user,
+        school=school,  # ✅ Filter by school
+        order_items__menu_item__available_date__range=[first_monday, last_friday]
+    ).distinct()
+
+    # ✅ Organize menu items by consumption date
+    menu_by_date = defaultdict(list)
+    for order in orders:
+        for item in order.order_items.all():
+            consumption_date = item.menu_item.available_date
+            if first_monday <= consumption_date <= last_friday:
+                menu_by_date[consumption_date].append(item.menu_item.plate_name)
+
+    # ✅ Get customer support details
+    profile = getattr(request.user, "profile", None)
+    customer_rep = getattr(profile, "customer_support_rep", None)
+
+    rep_name = getattr(customer_rep, "name", "Customer Support")
+    rep_email = getattr(customer_rep, "email", "support@fshealthymeals.com")
+    rep_phone = getattr(customer_rep, "phone", "818-797-5881")
+
+    # ✅ Prepare PDF
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=landscape(letter))
+    pdf.setTitle(f"Menu_Calendar_{month}_{year}")
+
+    # ✅ Define layout parameters
+    freshstart_green = (114 / 255, 188 / 255, 10 / 255)  # #72bc0a (Company Green)
+    start_x = 60  # Adjusted for equal left/right margins
+    start_y = 550  # Higher to fit content better
+    cell_width = 140  # Adjusted for proper margin balance
+    base_cell_height = 400  # Fixed height per cell
+    line_height = 12  # Line spacing
+
+    current_date = first_monday
+
+    while current_date <= last_friday:
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(start_x, 570, f"Menu Calendar - {calendar.month_name[month]} {year} (Week of {current_date.strftime('%B %d')})")
+
+        y_offset = start_y - 30  # Adjusted spacing for first row
+
+        # ✅ Fill in menu items per day (without weekday headers)
+        for i in range(5):  # Monday to Friday
+            x_pos = start_x + (i * cell_width)
+            y_pos = y_offset - base_cell_height
+
+            # ✅ Format: "Mar 03 - Monday"
+            date_label = f"{current_date.strftime('%b %d')} - {current_date.strftime('%A')}"
+
+            pdf.rect(x_pos, y_pos, cell_width, base_cell_height, stroke=1, fill=0)  # Fixed height
+            pdf.setFont("Helvetica-Bold", 11)
+            pdf.drawString(x_pos + 5, y_pos + base_cell_height - 15, date_label)
+
+            # ✅ Wrap text for menu items with separator lines
+            pdf.setFont("Helvetica", 10)
+            line_y = y_pos + base_cell_height - 35
+            items = menu_by_date.get(current_date, [])
+
+            for item in items:
+                wrapped_text = wrap(item, width=18)  # Wrap text properly
+                for line in wrapped_text:
+                    if line_y > y_pos + 15:  # Prevent overflow
+                        pdf.drawString(x_pos + 5, line_y, line)
+                        line_y -= line_height
+
+                # ✅ Draw a full-width separator line after each menu item
+                if line_y > y_pos + 15:
+                    pdf.line(x_pos + 5, line_y, x_pos + cell_width - 5, line_y)
+                    line_y -= 10  # Small space before next item
+
+            # ✅ Move to the next weekday
+            current_date += timedelta(days=1)
+
+            # ✅ Skip weekends
+            while current_date.weekday() >= 5:  # 5 = Saturday, 6 = Sunday
+                current_date += timedelta(days=1)
+
+        # ✅ Footer section (full width)
+        footer_y = 30
+        pdf.setFillColorRGB(*freshstart_green)
+        pdf.rect(50, footer_y, 700, 40, fill=1, stroke=0)
+
+        # ✅ Add customer support details in white text
+        pdf.setFillColorRGB(1, 1, 1)
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(60, footer_y + 25, f"{rep_name} | {rep_email} | {rep_phone}")
+
+        pdf.showPage()  # ✅ Ensures new page starts correctly
+
+    # ✅ Save the PDF
+    pdf.save()
+    buffer.seek(0)
+
+    # ✅ Serve PDF inline (opens in a new tab instead of downloading)
+    response = HttpResponse(buffer, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="Menu_Calendar_{month}_{year}.pdf"'
+    return response

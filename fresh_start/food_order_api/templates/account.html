@@ -6,35 +6,43 @@
 {% block content %}
     <h1>Account Settings</h1>
 
-    <!-- User Information -->
-    <div class="account-info">
-        <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
-        <p><strong>Account Type:</strong> {{ user.is_staff|yesno:"Admin,Customer" }}</p>
-        <p><strong>Member Since:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+    <div class="account-head">
+        <!-- User Information -->
+        <div class="account-info">
+            <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Account Type:</strong> {{ user.is_staff|yesno:"Admin,Customer" }}</p>
+            <p><strong>Member Since:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+        </div>
+
+        <!-- Customer Support Info -->
+        {% if user.profile.support_rep %}
+            <div class="account-info support-rep-info">
+                <h4>Assigned Customer Support Rep</h4>
+                {% if user.profile.support_rep.photo %}
+                    <img src="{{ user.profile.support_rep.photo.url }}" width="100" height="100" style="border-radius: 50px;">
+                {% else %}
+                    <img src="{% static 'images/placeholder-profile.png' %}" width="100" height="100" style="border-radius: 50px;">
+                {% endif %}
+                <p><strong>Name:</strong> {{ user.profile.support_rep.first_name }} {{ user.profile.support_rep.last_name }}</p>
+                <p><strong>Email:</strong> <a href="mailto:{{ user.profile.support_rep.email }}">{{ user.profile.support_rep.email }}</a></p>
+                <p><strong>Phone:</strong> {{ user.profile.support_rep.phone_number }} {% if user.profile.support_rep.extension %}Ext. {{ user.profile.support_rep.extension }}{% endif %}</p>
+            </div>
+        {% endif %}
     </div>
 
-    <!-- Update Profile -->
-    <h2>Update Profile</h2>
-    <form method="POST" action="{% url 'update_profile' %}">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Save Changes</button>
-    </form>
 
-    <!-- Change Password -->
-    <h2>Change Password</h2>
-    <form method="POST" action="{% url 'change_password' %}">
+    <form method="POST" action="{% url 'change_password' %}" class="account-buttons">
         {% csrf_token %}
         {{ password_form.as_p }}
-        <button type="submit">Change Password</button>
+        <button type="submit" class="change-password">Change Password</button>
     </form>
 
     <!-- Order History -->
-    <a href="{% url 'past_orders' %}" class="order-history-btn">View Past Orders</a>
+    <a href="{% url 'past_orders' %}" class="order-history-btn account-buttons">View Past Orders</a>
 
     <!-- Logout -->
-    <form method="POST" action="{% url 'logout' %}">
+    <form method="POST" action="{% url 'logout' %}"  class="account-buttons">
         {% csrf_token %}
         <button type="submit" class="logout-btn">Logout</button>
     </form>

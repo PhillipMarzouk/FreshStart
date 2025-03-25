@@ -9,4 +9,5 @@ class FoodOrderApiConfig(AppConfig):
 
 class MyAuthConfig(AuthConfig):
     name = 'django.contrib.auth'         # Must match the existing auth app
-    verbose_name = "User Management" 
+    verbose_name = "User Management"
+

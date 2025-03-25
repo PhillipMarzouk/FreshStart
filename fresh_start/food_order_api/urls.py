@@ -1,5 +1,6 @@
 from django.urls import path, include
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
@@ -9,8 +10,10 @@ from .views import (
             NewOrderView, CartView, Cart, CheckoutView,
             PastOrdersView, remove_from_cart, update_cart,
             AccountView, UpdateProfileView, ChangePasswordView,
-            logout_view, menu_item_clone_view
+            logout_view, menu_item_clone_view, export_menu_calendar,
+            send_password_reset_email, set_selected_school
 )
+
 
 
 urlpatterns = [
@@ -40,4 +43,26 @@ urlpatterns = [
     path("account/change-password/", ChangePasswordView.as_view(), name="change_password"),
     path("logout/", logout_view, name="logout"),
     path("menu-item/<int:pk>/clone/", menu_item_clone_view, name="menu_item_clone"),
+    path('export-menu-calendar/', export_menu_calendar, name='export_menu_calendar'),
+    path("set-selected-school/", set_selected_school, name="set_selected_school"),
+
+
+    path("password-reset/", send_password_reset_email, name="password_reset"),
+
+    path(
+        "password-reset-confirm/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name="registration/password_reset_confirm.html"
+        ),
+        name="password_reset_confirm",
+    ),
+
+    path(
+        "password-reset-complete/",
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name="registration/password_reset_complete.html"
+        ),
+        name="password_reset_complete",
+    ),
+
 ]

@@ -1,51 +1,75 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block content %}
-    <h1>Past Orders</h1>
+{% block body_class %}past-orders{% endblock %}
 
-    {% if not past_orders %}
-        <p>You have no past orders.</p>
+{% block content %}
+    <h1 class="page-title">Past Orders</h1>
+
+    <form method="GET" action="{% url 'export_menu_calendar' %}" target="_blank">
+        <label for="month">Select Month:</label>
+        <input type="month" id="month" name="month" required>
+        <button type="submit" style="background-color: #72bc0a; color: white; border: none; padding: 8px 12px; cursor: pointer;">
+            Export as Menu Calendar (PDF)
+        </button>
+    </form>
+
+
+    {% if not orders_with_dates %}
+        <p class="no-orders">You have no past orders.</p>
     {% else %}
         <div class="orders-container">
-            {% for order in past_orders %}
+            {% for order_id, order_data in orders_with_dates.items %}
                 <div class="order-card">
                     <div class="order-header">
-                        <h3>Order #{{ order.id }}</h3>
-                        <span class="order-status {{ order.status|lower }}">{{ order.get_status_display }}</span>
+                        <h3>Order #{{ order_id }}</h3>
+                        <span class="order-status {{ order_data.order.status|lower }}">{{ order_data.order.get_status_display }}</span>
                     </div>
 
-                    <p><strong>Order Date:</strong> {{ order.created_at|date:"F j, Y" }}</p>
+                    <p class="order-meta"><strong>Order Date:</strong> {{ order_data.order_date|date:"F j, Y" }}</p>
 
-                    <ul class="order-items">
-                        {% for order_item in order.order_items.all %}  <!-- ✅ FIXED -->
-                            <li>
-                                <div class="item-info">
-                                    {% if order_item.menu_item.image %}
-                                        <img src="{{ order_item.menu_item.image.url }}" alt="{{ order_item.menu_item.plate_name }}" class="item-image">
-                                    {% else %}
-                                        <img src="{% static 'images/placeholder.png' %}" alt="No Image" class="item-image">
-                                    {% endif %}
-                                    <div class="item-details">
-                                        <h4>{{ order_item.menu_item.plate_name }}</h4>
-                                        <p>
-                                            <strong>Type:</strong> {{ order_item.menu_item.meal_type }}
-                                            <br />
-                                            <strong>Includes:</strong> 
-                                                {% for portion in order_item.menu_item.plate_portions.all %}
-                                                    {{ portion.name }}{% if not forloop.last %}, {% endif %}
-                                                {% empty %}
-                                                    No portions specified.
-                                                {% endfor %}
-                                            <br />
-                                            <strong>Quantity:</strong> {{ order_item.quantity }}  <!-- ✅ FIXED -->
-                                        </p>
+                    {% for delivery_date, consumption_groups in order_data.delivery_groups.items %}
+                        <div class="delivery-section">
+                            <h4>🚚 Delivery Date: <span class="date-highlight">{{ delivery_date|date:"F j, Y" }}</span></h4>
+
+                            {% for consumption_date, items in consumption_groups.items %}
+                                <div class="consumption-section">
+                                    <h5>📅 Consumption Date: <span class="date-highlight">{{ consumption_date|date:"F j, Y" }}</span></h5>
+
+                                    <div class="menu-items-container">
+                                        {% for item in items %}
+                                            <div class="menu-item">
+                                                <div class="item-info">
+                                                    {% if item.order_item.menu_item.image %}
+                                                        <img src="{{ item.order_item.menu_item.image.url }}" alt="{{ item.order_item.menu_item.plate_name }}" class="item-image">
+                                                    {% else %}
+                                                        <img src="{% static 'images/placeholder.png' %}" alt="No Image" class="item-image">
+                                                    {% endif %}
+                                                    <div class="item-details">
+                                                        <h4 class="item-name">{{ item.order_item.menu_item.plate_name }}</h4>
+                                                        <p>
+                                                            <!--
+                                                            <strong>Type:</strong> {{ item.order_item.menu_item.meal_type }}<br />
+                                                            <strong>Includes:</strong>
+                                                                {% for portion in item.order_item.menu_item.plate_portions.all %}
+                                                                    {{ portion.name }}{% if not forloop.last %}, {% endif %}
+                                                                {% empty %}
+                                                                    No portions specified.
+                                                                {% endfor %}
+                                                            <br />
+                                                            -->
+                                                            <strong>Quantity:</strong> {{ item.order_item.quantity }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
                                     </div>
-                                </div>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
+                                </div> <!-- End Consumption Date Section -->
+                            {% endfor %}
+                        </div> <!-- End Delivery Section -->
+                    {% endfor %}
+                </div> <!-- End Order Card -->
             {% endfor %}
         </div>
     {% endif %}

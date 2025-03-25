@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    #'accounts',
     'food_order_api',
 ]
 
@@ -155,8 +154,6 @@ USE_I18N = True
 USE_TZ = True
 
 
-import os
-
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -177,3 +174,9 @@ LOGIN_URL = "/login/"  # Redirect users to login page if not logged in
 LOGIN_REDIRECT_URL = "/"  # After login, redirect them to homepage
 LOGOUT_REDIRECT_URL = "/login/"  # After logout, send back to login
 
+
+SENDPULSE_API_USER_ID = '814642285b74e16b4b05988f6d34ec94'
+SENDPULSE_API_SECRET = 'e6cc20441afd8fe7862f21f99f4f5f7c'
+SENDPULSE_SENDER_EMAIL = 'info@digitalonbrand.com'
+SENDPULSE_TEMPLATE_ID = 14152
+SENDPULSE_API_URL = 'https://api.sendpulse.com'

@@ -8,13 +8,13 @@
 
     <!-- Navigation for Months -->
     <div class="month-navigation">
-        <a href="{% url 'menu' %}?date={{ prev_month|date:'Y-m-d' }}" class="nav-button">&laquo; Previous Month</a>
-        <a href="{% url 'menu' %}?date={{ prev_month|date:'Y-m-d' }}" class="previous-week">&laquo;</a>
+        <a href="{% url 'new_order' %}?date={{ prev_month|date:'Y-m-d' }}" class="nav-button">&laquo; Previous Month</a>
+        <a href="{% url 'new_order' %}?date={{ prev_month|date:'Y-m-d' }}" class="previous-week">&laquo;</a>
         <span class="month-range">
             {{ selected_month|date:"F Y" }}
         </span>
-        <a href="{% url 'menu' %}?date={{ next_month|date:'Y-m-d' }}" class="nav-button">Next Month &raquo;</a>
-        <a href="{% url 'menu' %}?date={{ next_month|date:'Y-m-d' }}" class="next-week">&raquo;</a>
+        <a href="{% url 'new_order' %}?date={{ next_month|date:'Y-m-d' }}" class="nav-button">Next Month &raquo;</a>
+        <a href="{% url 'new_order' %}?date={{ next_month|date:'Y-m-d' }}" class="next-week">&raquo;</a>
     </div>
 
 

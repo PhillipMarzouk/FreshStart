@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fresh Start</title>
 
-    {% load static %}  <!-- Load static for CSS and images --> 
+    {% load static %}  <!-- Load static for CSS and images -->
 
     <!-- Bootstrap 4.5.2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css">
-    
+
     <!-- Font Awesome 5.15.1 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
-    
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
@@ -64,23 +64,57 @@
                     <i class="fas fa-user"></i> <span class="menu-text">Account</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a href="#" class="nav-link">
-                    <i class="fas fa-cog"></i> <span class="menu-text">Settings</span>
-                </a>
-            </li>
             <li id="menu-toggle" class="nav-item">
                 <button id="toggle" class="toggle-btn nav-link">
                     <i class="fas fa-chevron-left"></i> <span class="menu-text">Collapse</span>
                 </button>
             </li>
         </ul>
-    </div>    
+    </div>
     {% endif %}
 
     <!-- Main Content -->
     <div class="main-content">
+
+        <select id="school-select" name="selected_school">
+            <option value="" disabled {% if not request.session.selected_school %}selected{% endif %}>Select a School</option>
+            {% for school in request.user.schools.all %}
+                <option value="{{ school.id }}"
+                    {% if school.id|stringformat:"s" == request.session.selected_school|stringformat:"s" %}selected{% endif %}>
+                    {{ school.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+
+        <script>
+        document.getElementById("school-select").addEventListener("change", function () {
+            const schoolId = this.value;
+
+            fetch("{% url 'set_selected_school' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: new URLSearchParams({ school_id: schoolId }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();  // ✅ Refresh the page to apply new school context
+                } else {
+                    alert("Failed to switch school: " + data.error);
+                }
+            });
+        });
+        </script>
+
+
+        <hr>
+
         {% block content %} {% endblock %}
+
     </div>
 
     <!-- Bootstrap JS & jQuery -->
@@ -89,7 +123,7 @@
 
     <!-- Custom Script -->
     <script src="{% static 'js/menu.js' %}"></script>
-        
+
 
 </body>
 </html>
