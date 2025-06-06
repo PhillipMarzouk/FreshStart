@@ -3,7 +3,7 @@
     --primary-color: #72bc0a;  /* Fresh Start Green */
     --secondary-color: #953d21; /* Fresh Start Brown */
     --tirciary-color: #f5f5f5;  /* Fresh Start Light Gray */
-    --button-bg: #72bc0a; 
+    --button-bg: #72bc0a;
     --default-button-hover-bg: #72bc0a;
     --default-button-bg: #5a9708;
     --button-hover-bg: #5a9708;
@@ -57,4 +57,17 @@ div.breadcrumbs {
     text-align: left;
     background: var(--primary-color);
     color: var(--header-link-color);
+}
+
+/* Inline checkbox list */
+#id_delivery_schedule, #id_pizza_days, #id_lunch_programs, #id_family_style_days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    list-style: none;
+    padding-left: 0;
+}
+
+#id_delivery_schedule div, #id_pizza_days div, #id_lunch_programs div, #id_family_style_days div {
+    margin-right: 10px;
 }

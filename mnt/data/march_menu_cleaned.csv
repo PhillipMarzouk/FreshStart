@@ -1,0 +1,21 @@
+plate_name,available_date,meal_type,lunch_program,plate_portions,New,image_url
+Chocolate Chip Muffin,2025-03-03,Breakfast,1 | 2 | 3 | 4 | 5,1,False,https://example.com/placeholder.png
+Cinnamon Toast Crunch & WG Crackers,2025-03-03,Breakfast,1 | 2 | 3 | 4 | 5,1,True,https://example.com/placeholder.png
+Hamburger w/sweet potato (3/4c),2025-03-03,Hot Meal,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Lemon Garlic Chicken w/cilantro rice (3/4c) & glazed peas & carrots (3/4c),2025-03-03,Hot Meal,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Bean & Cheese Burrito w/carrot sticks (1/2c),2025-03-03,Hot Vegetarian,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Roasted Pepper Chicken Hoagie Sandwich w/carrot sticks (3/4c),2025-03-03,Cold Meal,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Asian Chicken Pasta Salad,2025-03-03,Cold Pastas,1 | 2 | 3 | 4 | 5,1 | 2 | 3,False,https://example.com/placeholder.png
+Garlic Pesto Cheese Pasta Salad w/carrot sticks (3/4c),2025-03-03,Cold Vegetarian,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Caesar Chicken Salad with a Wheat Dinner Roll,2025-03-03,Daily Salad,1 | 2 | 3 | 4 | 5,1 | 2 | 3,False,https://example.com/placeholder.png
+Oatmeal Cookie (S),2025-03-03,Snack,1 | 2 | 3 | 4 | 5,1 | 4,False,https://example.com/placeholder.png
+Sausage English Muffin,2025-03-04,Breakfast,1 | 2 | 3 | 4 | 5,1 | 2,False,https://example.com/placeholder.png
+Bagel & Jelly,2025-03-04,Breakfast,1 | 2 | 3 | 4 | 5,1 | 4,False,https://example.com/placeholder.png
+Sloppy Joe on a HB Bun w/sweet corn medley (3/4c),2025-03-04,Hot Meal,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Fresco Beef w/cilantro rice (3/4c) & sweet corn medley (3/4c),2025-03-04,Hot Meal,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Black Bean Burger w/sweet corn medley (3/4c),2025-03-04,Hot Vegetarian,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Turkey & Cheese Hoagie Sandwich w/garden corn salad (3/4c),2025-03-04,Cold Meal,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Fiesta Chicken Pasta Salad,2025-03-04,Cold Pastas,1 | 2 | 3 | 4 | 5,1 | 2 | 3,False,https://example.com/placeholder.png
+Bean & Cheese Torta w/garden corn salad (3/4c),2025-03-04,Cold Vegetarian,1,1 | 2 | 3,False,https://example.com/placeholder.png
+Mediterranean Chicken Salad with a Wheat Dinner Roll,2025-03-04,Daily Salad,1 | 2 | 3 | 4 | 5,1 | 2 | 3,False,https://example.com/placeholder.png
+Banana Muffin (S),2025-03-04,Snack,1 | 2 | 3 | 4 | 5,1,False,https://example.com/placeholder.png

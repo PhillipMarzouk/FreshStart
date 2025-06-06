@@ -11,11 +11,11 @@
         <div class="admin-actions">
             <a href="{% url 'admin:food_order_api_userorder_changelist' %}" class="btn">Manage Orders</a>
             <a href="{% url 'admin:food_order_api_menuitem_changelist' %}" class="btn">Manage Menu</a>
-            <a href="{% url 'admin:auth_user_changelist' %}" class="btn">View Users</a>
+            <a href="{% url 'admin:food_order_api_customuser_changelist' %}" class="btn">View Users</a>
         </div>
-        
+
         <hr>
-        
+
         <h3>Order Overview</h3>
         <ul class="status-list">
             {% for status, count in order_status_counts.items %}
@@ -23,7 +23,7 @@
             {% endfor %}
         </ul>
     {% else %}
-       
+
         <h3>Active Orders</h3>
         {% if active_orders %}
             <ul class="order-list">

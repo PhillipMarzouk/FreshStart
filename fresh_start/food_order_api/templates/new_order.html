@@ -30,7 +30,7 @@
             {% if menu_items %}
                 <ul class="menu-list">
                     {% for item in menu_items %}
-                        <li class="menu-item">
+                        <li class="menu-item" data-meal-type="{{ item.meal_type }}" data-is-field-trip="{{ item.is_field_trip|yesno:'true,false' }}">
                             <!-- Meal Image -->
                             {% if item.image %}
                                 <img src="{{ item.image.url }}" alt="{{ item.plate_name }}" class="meal-image">
@@ -59,7 +59,7 @@
                                 <!-- Quantity Selector -->
                                 <label for="quantity_{{ item.id }}">Quantity:</label>
                                 <input type="number" class="quantity-selector" name="quantities[]" id="quantity_{{ item.id }}" value="0" min="0">
-                                <input type="hidden" name="menu_items[]" value="{{ item.id }}">
+                                <input type="hidden" name="menu_items[]" value="{{ item.id }}|{{ date|date:'Y-m-d' }}">
 
                             </div>
                         </li>

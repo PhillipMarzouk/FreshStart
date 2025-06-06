@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'food_order_api',
+    'food_order_api.apps.FoodOrderApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -69,7 +69,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'food_order_api',
+    'food_order_api.apps.FoodOrderApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -142,6 +142,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'food_order_api.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
@@ -181,3 +186,8 @@ SENDPULSE_API_SECRET = 'e6cc20441afd8fe7862f21f99f4f5f7c'
 SENDPULSE_SENDER_EMAIL = 'info@digitalonbrand.com'
 SENDPULSE_TEMPLATE_ID = 14152
 SENDPULSE_API_URL = 'https://api.sendpulse.com'
+
+
+
+
+AUTH_USER_MODEL = 'food_order_api.CustomUser'

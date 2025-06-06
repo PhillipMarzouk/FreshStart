@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    console.log("🔹 Order script loaded"); // ✅ Debugging log
+    console.log("🔹 Order script loaded");
 
     const orderForm = document.getElementById("orderForm");
 
@@ -8,42 +8,122 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
     }
 
-    // ✅ Handle quantity changes to update item selection & styling
-    document.querySelectorAll(".quantity-selector").forEach(input => {
-        input.addEventListener("input", function () {
-            let listItem = this.closest(".menu-item"); // ✅ Get the closest <li> parent
-            let quantity = parseInt(this.value) || 0; // ✅ Convert value to number
+    function getMealType(item) {
+        return item.getAttribute("data-meal-type") || "";
+    }
 
-            if (quantity > 0) {
-                listItem.classList.add("selected"); // ✅ Add green background
-            } else {
-                listItem.classList.remove("selected"); // ✅ Remove green background
+    function isFieldTrip(item) {
+        return item.getAttribute("data-is-field-trip") === "true";
+    }
+
+
+    function updateMealTypeLockouts() {
+        const mealTypeCounts = {
+            "Hot Meal": 0,
+            "Hot Vegetarian": 0,
+            "Cold Meal": 0,
+            "Cold Vegetarian": 0
+        };
+
+        document.querySelectorAll(".menu-item").forEach(item => {
+            const mealType = getMealType(item);
+            const input = item.querySelector(".quantity-selector");
+            const quantity = parseInt(input.value) || 0;
+
+            if (!isFieldTrip(item) && mealType in mealTypeCounts) {
+                mealTypeCounts[mealType] += quantity;
             }
         });
 
-        // ✅ Ensure styling applies on page load if values were saved
+        document.querySelectorAll(".menu-item").forEach(item => {
+            const mealType = getMealType(item);
+            const input = item.querySelector(".quantity-selector");
+            const quantity = parseInt(input.value) || 0;
+
+            if (isFieldTrip(mealType) || !(mealType in mealTypeCounts)) {
+                input.disabled = false;
+                item.classList.remove("disabled");
+                item.style.opacity = 1;
+                return;
+            }
+
+            if (mealTypeCounts[mealType] > 0 && quantity === 0) {
+                input.disabled = true;
+                item.classList.add("disabled");
+                item.style.opacity = 0.5;
+            } else {
+                input.disabled = false;
+                item.classList.remove("disabled");
+                item.style.opacity = 1;
+            }
+        });
+    }
+
+    document.querySelectorAll(".quantity-selector").forEach(input => {
+        input.addEventListener("input", function () {
+            let listItem = this.closest(".menu-item");
+            let quantity = parseInt(this.value) || 0;
+
+            if (quantity > 0) {
+                listItem.classList.add("selected");
+            } else {
+                listItem.classList.remove("selected");
+            }
+
+            updateMealTypeLockouts();
+        });
+
         let initialQuantity = parseInt(input.value) || 0;
         if (initialQuantity > 0) {
             input.closest(".menu-item").classList.add("selected");
         }
     });
 
-    // ✅ Handle form submission
     orderForm.addEventListener("submit", function (event) {
-        event.preventDefault(); // ✅ Prevent default submission
+        const mealTypeCounts = {
+            "Hot Meal": 0,
+            "Hot Vegetarian": 0,
+            "Cold Meal": 0,
+            "Cold Vegetarian": 0
+        };
+
+        document.querySelectorAll(".menu-item").forEach(item => {
+            const q = parseInt(item.querySelector(".quantity-selector").value) || 0;
+            const type = getMealType(item);
+
+            if (!isFieldTrip(type) && type in mealTypeCounts) {
+                mealTypeCounts[type] += q;
+            }
+        });
+
+        // ✅ Count how many different hot/cold meal types have a quantity > 0
+        let hotCount = 0;
+        let coldCount = 0;
+
+        if (mealTypeCounts["Hot Meal"] > 0) hotCount++;
+        if (mealTypeCounts["Hot Vegetarian"] > 0) hotCount++;
+        if (mealTypeCounts["Cold Meal"] > 0) coldCount++;
+        if (mealTypeCounts["Cold Vegetarian"] > 0) coldCount++;
+
+        if (hotCount > 1 || coldCount > 1) {
+            alert("You may only select one of each hot and one of each cold meal type.");
+            event.preventDefault();
+            return;
+        }
+
 
         let selectedItems = [];
         let quantities = [];
 
         document.querySelectorAll(".menu-item").forEach(item => {
             let quantityInput = item.querySelector(".quantity-selector");
-            let itemIdInput = item.querySelector("input[name='menu_items[]']"); // ✅ Use array notation
+            let itemIdInput = item.querySelector("input[name='menu_items[]']");
 
             if (quantityInput && itemIdInput) {
                 let quantity = parseInt(quantityInput.value);
                 let itemId = itemIdInput.value;
 
-                if (quantity > 0) { // ✅ Only add items with quantity > 0
+                if (quantity > 0) {
                     selectedItems.push(itemId);
                     quantities.push(quantity);
                 }
@@ -52,25 +132,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (selectedItems.length === 0) {
             alert("Please select at least one menu item with a Quantity above 0.");
+            event.preventDefault();
             return;
         }
 
         console.log("✅ Selected Items:", selectedItems);
         console.log("✅ Selected Quantities:", quantities);
 
-        // ✅ Remove old hidden inputs before adding new ones
         document.querySelectorAll("input[name='menu_items[]'], input[name='quantities[]']").forEach(input => input.remove());
 
-        // ✅ Create hidden input fields to store selected items
         selectedItems.forEach((itemId, index) => {
             let menuItemInput = document.createElement("input");
             menuItemInput.type = "hidden";
-            menuItemInput.name = "menu_items[]"; // ✅ Correctly named for multiple values
+            menuItemInput.name = "menu_items[]";
             menuItemInput.value = itemId;
 
             let quantityInput = document.createElement("input");
             quantityInput.type = "hidden";
-            quantityInput.name = "quantities[]"; // ✅ Correctly named for multiple values
+            quantityInput.name = "quantities[]";
             quantityInput.value = quantities[index];
 
             orderForm.appendChild(menuItemInput);
@@ -78,6 +157,5 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         console.log("✅ Form data updated. Submitting...");
-        orderForm.submit(); // ✅ Submit form after fixing inputs
     });
 });

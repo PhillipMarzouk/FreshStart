@@ -275,7 +275,7 @@
 
 button.checkout-button {
     float: left;
-    margin-top: -48px;
+    margin-top: 185px;
     margin-left: 150px;
 }
 
@@ -667,8 +667,23 @@ body.login-page .main-content {
     border-radius: 5px;
     font-size: 14px;
     font-weight: bold;
-    background-color: #72bc0a;
     color: white;
+}
+
+.past-orders .pending {
+    background-color: #f4b400;
+}
+
+.past-orders .nutrition-review {
+    background-color: #2ca8a4;
+}
+
+.past-orders .approved {
+    background-color: #72bc0a;
+}
+
+.past-orders .on-hold {
+    background-color: #e35d5b;
 }
 
 /* Order Meta Information */
@@ -878,4 +893,32 @@ button {
 .logout-btn {
     background: red;
     color: white;
+}
+
+
+/* ------------------ */
+/**********************/
+/*    Cart Page    */
+/**********************/
+/* ------------------ */
+
+
+#checkout_form {
+    position:relative;
+    margin-top: -230px;
+}
+
+.notes {
+    padding-top: 25px;
+}
+
+.notice {
+    padding: 15px;
+    background: #fff5f5;
+    border: solid 3px #b42835;
+    margin: 15px 0;
+    color: #b42835;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 12px;
 }

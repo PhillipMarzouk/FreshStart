@@ -127,3 +127,55 @@ class SendPulseAPI:
         response = requests.post(url, headers=headers, json=payload)
         logger.error(f"📨 Order notification email response: {response.status_code} {response.json()}")
         return response.json()
+
+    def send_order_confirmation_to_customer(self, order):
+        from_user = order.user
+        to_email = from_user.email
+        full_name = f"{from_user.first_name} {from_user.last_name}".strip()
+
+        order_items = order.order_items.select_related("menu_item").all()
+        item_lines = "<br>".join(
+            f"{item.menu_item.plate_name} × {item.quantity} — {item.menu_item_date.strftime('%b %d')}"
+            for item in order_items
+        )
+
+        html_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px;">
+                <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 8px; padding: 30px;">
+                    <h2 style="color: #72bc0a;">Thanks for your order, {from_user.first_name}!</h2>
+                    <p>Here’s a summary of your order:</p>
+                    <p>{item_lines}</p>
+                    <p style="margin-top: 20px;">We'll take it from here!</p>
+                    <p style="font-size: 12px; color: #888;">FreshStart Healthy Meals</p>
+                </div>
+            </body>
+            </html>
+        """
+
+        payload = {
+            "email": {
+                "subject": f"Your FreshStart Order Confirmation - #{order.id}",
+                "from": {
+                    "name": "FreshStart Meals",
+                    "email": settings.SENDPULSE_SENDER_EMAIL
+                },
+                "to": [{"email": to_email}],
+                "body": html_body,
+                "text": f"Hi {full_name},\n\nThanks for your order!\n\nItems:\n" +
+                        "\n".join(f"- {item.menu_item.plate_name} x{item.quantity}" for item in order_items) +
+                        "\n\nFreshStart Healthy Meals"
+            }
+        }
+
+        url = f"{self.api_url}/smtp/emails"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(url, headers=headers, json=payload)
+        logger.error(f"📨 Confirmation email to customer response: {response.status_code} {response.json()}")
+        return response.json()
+
+

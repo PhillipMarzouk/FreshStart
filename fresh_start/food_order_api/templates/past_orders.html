@@ -1,10 +1,18 @@
 {% extends "base.html" %}
 {% load static %}
+{% load dict_filters %}
+
 
 {% block body_class %}past-orders{% endblock %}
 
 {% block content %}
     <h1 class="page-title">Past Orders</h1>
+
+    <div class="notice">
+
+        Any changes or modifications, please contact Customer Support
+
+    </div>
 
     <form method="GET" action="{% url 'export_menu_calendar' %}" target="_blank">
         <label for="month">Select Month:</label>
@@ -15,6 +23,7 @@
     </form>
 
 
+
     {% if not orders_with_dates %}
         <p class="no-orders">You have no past orders.</p>
     {% else %}
@@ -23,7 +32,7 @@
                 <div class="order-card">
                     <div class="order-header">
                         <h3>Order #{{ order_id }}</h3>
-                        <span class="order-status {{ order_data.order.status|lower }}">{{ order_data.order.get_status_display }}</span>
+                        <span class="order-status {{ order_data.order.status|slugify }}">{{ order_data.order.get_status_display }}</span>
                     </div>
 
                     <p class="order-meta"><strong>Order Date:</strong> {{ order_data.order_date|date:"F j, Y" }}</p>
@@ -40,11 +49,23 @@
                                         {% for item in items %}
                                             <div class="menu-item">
                                                 <div class="item-info">
-                                                    {% if item.order_item.menu_item.image %}
-                                                        <img src="{{ item.order_item.menu_item.image.url }}" alt="{{ item.order_item.menu_item.plate_name }}" class="item-image">
+
+                                                    {% if item.order_item.menu_item.meal_type == "Milk" %}
+                                                        {% with milk_images|dict_get:item.order_item.menu_item.plate_name as milk_img %}
+                                                            {% if milk_img %}
+                                                                <img src="{{ milk_img }}" alt="{{ item.order_item.menu_item.plate_name }}" class="item-image">
+                                                            {% else %}
+                                                                <img src="{% static 'images/placeholder.png' %}" alt="No image" class="item-image">
+                                                            {% endif %}
+                                                        {% endwith %}
                                                     {% else %}
-                                                        <img src="{% static 'images/placeholder.png' %}" alt="No Image" class="item-image">
+                                                        {% if item.order_item.menu_item.image %}
+                                                            <img src="{{ item.order_item.menu_item.image.url }}" alt="{{ item.order_item.menu_item.plate_name }}" class="item-image">
+                                                        {% else %}
+                                                            <img src="{% static 'images/placeholder.png' %}" alt="No Image" class="item-image">
+                                                        {% endif %}
                                                     {% endif %}
+
                                                     <div class="item-details">
                                                         <h4 class="item-name">{{ item.order_item.menu_item.plate_name }}</h4>
                                                         <p>
@@ -69,6 +90,13 @@
                             {% endfor %}
                         </div> <!-- End Delivery Section -->
                     {% endfor %}
+
+                    <div class="notes">
+                        {% if order_data.order.notes %}
+                            <p><strong>Notes:</strong> {{ order_data.order.notes }}</p>
+                        {% endif %}
+                    </div>
+
                 </div> <!-- End Order Card -->
             {% endfor %}
         </div>
