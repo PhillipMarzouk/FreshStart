@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fresh Start</title>
+
+    {% load static %}  <!-- Load static for CSS and images -->
+
+    <!-- Bootstrap 4.5.2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css">
+
+    <!-- Font Awesome 5.15.1 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+
+    {% if request.resolver_match.url_name != "login" %}
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <img id="menu-logo" src="{% static 'images/fresh_start_logo.avif' %}" alt="Fresh Start" class="sidebar-logo">
+            <div>
+                <span class="sidebar-title">Fresh Start</span>
+                <span class="sidebar-subtitle">Order Manager</span>
+            </div>
+        </div>
+
+
+        <!-- Menu Items -->
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a href="{% url 'dashboard' %}" class="nav-link">
+                    <i class="fas fa-home"></i> <span class="menu-text">Home</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'menu' %}" class="nav-link">
+                    <i class="fas fa-utensils"></i> <span class="menu-text">Menu</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'new_order' %}" class="nav-link">
+                    <i class="fas fa-plus-circle"></i> <span class="menu-text">New Order</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'past_orders' %}" class="nav-link">
+                    <i class="fas fa-history"></i> <span class="menu-text">Past Orders</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Account & Settings -->
+        <ul class="nav flex-column bottom-menu">
+            <li class="nav-item">
+                <a href="{% url 'account' %}" class="nav-link">
+                    <i class="fas fa-user"></i> <span class="menu-text">Account</span>
+                </a>
+            </li>
+            <li id="menu-toggle" class="nav-item">
+                <button id="toggle" class="toggle-btn nav-link">
+                    <i class="fas fa-chevron-left"></i> <span class="menu-text">Collapse</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+        <select id="school-select" name="selected_school">
+            {% with user_schools=request.user.schools.all %}
+                {% if user_schools %}
+                    {% for school in user_schools %}
+                        <option value="{{ school.id }}"
+                            {% if school.id|stringformat:"s" == request.session.selected_school|stringformat:"s" or forloop.first and not request.session.selected_school %}selected{% endif %}>
+                            {{ school.name }}
+                        </option>
+                    {% endfor %}
+                {% else %}
+                    <option value="" disabled selected>Select a School</option>
+                {% endif %}
+            {% endwith %}
+        </select>
+
+        <script>
+        document.getElementById("school-select").addEventListener("change", function () {
+            const schoolId = this.value;
+
+            fetch("{% url 'set_selected_school' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: new URLSearchParams({ school_id: schoolId }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();  // ✅ Refresh the page to apply new school context
+                } else {
+                    alert("Failed to switch school: " + data.error);
+                }
+            });
+        });
+        </script>
+
+        <hr>
+
+        {% block content %} {% endblock %}
+
+    </div>
+
+    <!-- Bootstrap JS & jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom Script -->
+    <script src="{% static 'js/menu.js' %}"></script>
+
+
+</body>
+</html>

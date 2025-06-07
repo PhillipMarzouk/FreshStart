@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Cart{% endblock %}
+
+{% block content %}
+    <h1>My Cart</h1>
+
+    {% if grouped_cart_items %}
+        <form method="POST" action="{% url 'cart' %}">
+            {% csrf_token %}
+
+            {% for order_date, cart_items in grouped_cart_items.items %}
+                <strong>{{ order_date|date:"F j, Y" }}</strong> <!-- ✅ Display Date -->
+
+                <ul class="menu-list">
+                    {% for cart in cart_items %}
+                        <li class="menu-item" data-date="{{ order_date|date:'Y-m-d' }}" data-portions="{% for portion in cart.menu_item.plate_portions.all %}{{ portion.name }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                            {% if cart.menu_item.image %}
+                                <img src="{{ cart.menu_item.image.url }}" alt="{{ cart.menu_item.plate_name }}" class="meal-image">
+                            {% else %}
+                                <img src="{% static 'images/placeholder.png' %}" alt="No Image Available" class="meal-image">
+                            {% endif %}
+
+                            <div class="meal-info">
+                                <h3>{{ cart.menu_item.plate_name }}</h3>
+
+                                <!-- NEW Badge -->
+                                {% if cart.menu_item.is_new %}
+                                    <span class="new-badge">NEW</span>
+                                {% endif %}
+
+                                <p><strong>Type:</strong> {{ cart.menu_item.meal_type }}</p>
+
+                                <p><strong>Includes:</strong>
+                                    {% for portion in cart.menu_item.plate_portions.all %}
+                                        {{ portion.name }}{% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                        No portions specified.
+                                    {% endfor %}
+                                </p>
+
+                                <!-- Quantity Selector -->
+                                <label for="quantity_{{ cart.id }}">Quantity:</label>
+                                <input type="number" class="quantity-selector" name="quantity_{{ cart.id }}" id="quantity_{{ cart.id }}" value="{{ cart.quantity }}" min="1">
+
+                                <!-- Remove Item Link -->
+                                <a href="{% url 'remove_from_cart' cart.id %}" class="remove-btn">Remove</a>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endfor %}
+
+            <hr>
+
+            <label for="notes">Special Instructions:</label>
+            <textarea name="notes" id="notes" rows="3" class="form-control">{{ notes }}</textarea>
+
+            <hr>
+
+            <!-- Update Cart Button -->
+            <button type="submit" class="update-cart-button">Update Cart</button>
+        </form>
+
+        <!-- Checkout Button -->
+        <form id="checkout_form" method="POST" action="{% url 'checkout' %}">
+            {% csrf_token %}
+
+            <input type="hidden" name="notes" id="checkout_notes" value="{{ notes|default_if_none:'' }}">
+            <button type="submit" class="checkout-button">Checkout</button>
+
+        </form>
+
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+
+
+
+<script>
+  const visibleNotes = document.getElementById("notes");
+  const hiddenCheckoutNotes = document.getElementById("checkout_notes");
+
+  if (visibleNotes && hiddenCheckoutNotes) {
+    visibleNotes.addEventListener("input", function () {
+      hiddenCheckoutNotes.value = visibleNotes.value;
+    });
+  }
+</script>
+
+
+{% endblock %}

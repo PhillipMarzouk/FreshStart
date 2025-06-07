@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}New Order{% endblock %}
+
+{% block content %}
+    <h1>New Order</h1>
+
+    <!-- Navigation for Months -->
+    <div class="month-navigation">
+        <a href="{% url 'new_order' %}?date={{ prev_month|date:'Y-m-d' }}" class="nav-button">&laquo; Previous Month</a>
+        <a href="{% url 'new_order' %}?date={{ prev_month|date:'Y-m-d' }}" class="previous-week">&laquo;</a>
+        <span class="month-range">
+            {{ selected_month|date:"F Y" }}
+        </span>
+        <a href="{% url 'new_order' %}?date={{ next_month|date:'Y-m-d' }}" class="nav-button">Next Month &raquo;</a>
+        <a href="{% url 'new_order' %}?date={{ next_month|date:'Y-m-d' }}" class="next-week">&raquo;</a>
+    </div>
+
+
+
+
+    <!-- Order Form -->
+    <form id="orderForm" method="POST" action="{% url 'new_order' %}">
+        {% csrf_token %}
+
+    {% for date, menu_items in menu_items_by_date.items  %}
+        <hr>
+        <strong>{{ date|date:"l, F j, Y" }}</strong>
+            {% if menu_items %}
+                <ul class="menu-list">
+                    {% for item in menu_items %}
+                        <li class="menu-item" data-meal-type="{{ item.meal_type }}" data-is-field-trip="{{ item.is_field_trip|yesno:'true,false' }}">
+                            <!-- Meal Image -->
+                            {% if item.image %}
+                                <img src="{{ item.image.url }}" alt="{{ item.plate_name }}" class="meal-image">
+                            {% else %}
+                                <img src="{% static 'images/placeholder.png' %}" alt="No Image" class="meal-image">
+                            {% endif %}
+
+                            <!-- Meal Info -->
+                            <div class="meal-info">
+                                <h3>{{ item.plate_name }}</h3>
+
+                                {% if item.is_new %}
+                                    <span class="new-badge">NEW</span>
+                                {% endif %}
+
+                                <p><strong>Type:</strong> {{ item.meal_type }}</p>
+
+                                <p><strong>Includes:</strong>
+                                    {% for portion in item.plate_portions.all %}
+                                        {{ portion.name }}{% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                        No portions specified.
+                                    {% endfor %}
+                                </p>
+
+                                <!-- Quantity Selector -->
+                                <label for="quantity_{{ item.id }}">Quantity:</label>
+                                <input type="number" class="quantity-selector" name="quantities[]" id="quantity_{{ item.id }}" value="0" min="0">
+                                <input type="hidden" name="menu_items[]" value="{{ item.id }}|{{ date|date:'Y-m-d' }}">
+
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No menu items available for this date.</p>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Submit Button -->
+        <div class="cart-button-wrapper">
+            <button type="submit" class="add-to-cart-button">Add to Cart</button>
+        </div>
+    </form>
+
+    <script src="{% static 'js/dropdown.js' %}"></script>
+    <script src="{% static 'js/order.js' %}"></script>
+
+
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <h1>Welcome, {{ user.first_name|default:user.username }}!</h1>
+    <hr>
+
+    {% if is_admin %}
+        <div class="admin-actions">
+            <a href="{% url 'admin:food_order_api_userorder_changelist' %}" class="btn">Manage Orders</a>
+            <a href="{% url 'admin:food_order_api_menuitem_changelist' %}" class="btn">Manage Menu</a>
+            <a href="{% url 'admin:food_order_api_customuser_changelist' %}" class="btn">View Users</a>
+        </div>
+
+        <hr>
+
+        <h3>Order Overview</h3>
+        <ul class="status-list">
+            {% for status, count in order_status_counts.items %}
+                <li><strong>{{ status }}</strong>: {{ count }} orders</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+
+        <h3>Active Orders</h3>
+        {% if active_orders %}
+            <ul class="order-list">
+                {% for order in active_orders %}
+                    <li>
+                        <strong>Order #{{ order.id }}</strong> - {{ order.get_status_display }}
+                        <br>Placed on: {{ order.created_at|date:"F j, Y" }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No active orders.</p>
+        {% endif %}
+
+        <h3>Recent Orders</h3>
+        {% if past_orders %}
+            <ul class="order-list">
+                {% for order in past_orders %}
+                    <li>
+                        <strong>Order #{{ order.id }}</strong> - {{ order.get_status_display }}
+                        <br>Placed on: {{ order.created_at|date:"F j, Y" }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No past orders found.</p>
+        {% endif %}
+    {% endif %}
+{% endblock %}

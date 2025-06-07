@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Monthly Menu{% endblock %}
+
+{% block content %}
+    <h1>Monthly Menu</h1>
+
+    <!-- Navigation for Months -->
+    <div class="month-navigation">
+        <a href="{% url 'menu' %}?date={{ prev_month|date:'Y-m-d' }}" class="nav-button">&laquo; Previous Month</a>
+        <a href="{% url 'menu' %}?date={{ prev_month|date:'Y-m-d' }}" class="previous-week">&laquo;</a>
+        <span class="month-range">
+            {{ selected_month|date:"F Y" }}
+        </span>
+        <a href="{% url 'menu' %}?date={{ next_month|date:'Y-m-d' }}" class="nav-button">Next Month &raquo;</a>
+        <a href="{% url 'menu' %}?date={{ next_month|date:'Y-m-d' }}" class="next-week">&raquo;</a>
+    </div>
+
+
+    <!-- Display Menu for Each Day -->
+    {% for date, menu_items in menu_items_by_date.items  %}
+        <hr>
+
+        <strong>{{ date|date:"l, F j, Y" }}</strong>
+        {% if menu_items %}
+            <ul class="menu-list">
+                {% for item in menu_items %}
+                    <li class="menu-item">
+                        <!-- Meal Image -->
+                        {% if item.image and item.image.url %}
+                            <img src="{{ item.image.url }}" alt="{{ item.plate_name }}" class="meal-image">
+                        {% else %}
+                            <img src="{% static 'images/placeholder.png' %}" alt="No Image" class="meal-image">
+                        {% endif %}
+
+                        <!-- Meal Info -->
+                        <div class="meal-info">
+                            <h3>{{ item.plate_name }}</h3>
+                            {% if item.is_new %}
+                                <span class="new-badge">New</span>  <!-- ✅ New Badge Added -->
+                            {% endif %}
+                            <p><strong>Type:</strong> {{ item.meal_type }}</p>
+
+                            <!-- ✅ New row: Includes -->
+                            <p><strong>Includes:</strong>
+                                {% for portion in item.plate_portions.all %}
+                                    {{ portion.name }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    No portions specified.
+                                {% endfor %}
+                            </p>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No menu items available for this day.</p>
+        {% endif %}
+    {% endfor %}
+
+{% endblock %}

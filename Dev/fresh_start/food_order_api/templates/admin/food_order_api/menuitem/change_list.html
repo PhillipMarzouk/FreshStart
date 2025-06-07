@@ -1,0 +1,230 @@
+{% extends "admin/change_list.html" %}
+{# 
+  File: 
+    food_order_api/templates/admin/food_order_api/menuitem/change_list.html 
+
+  Purpose: 
+    Extend the default "change_list" (the screen that shows all MenuItems),
+    inject a button next to "Add Menu Item +", and include a modal 
+    for drag-and-drop CSV uploading. 
+#}
+{% load static i18n %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <li>
+        <a
+          href="#"
+          class="addlink"
+          id="upload-csv-button"
+          title="{% trans 'Upload CSV file of menu items' %}"
+        >
+          {% trans "Upload CSV" %}
+        </a>
+    </li>
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+
+    <style>
+      /* Full‐screen backdrop */
+      #uploadCsvModalBackdrop {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+      }
+
+      /* Centered modal */
+      #uploadCsvModal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 500px;
+        max-width: 90%;
+        background: #fff;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        z-index: 1001;
+        padding: 20px;
+      }
+
+      /* Modal header */
+      #uploadCsvModal .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 15px;
+      }
+      #uploadCsvModal .modal-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+      #uploadCsvModal .modal-header .modal-close {
+        cursor: pointer;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      /* Drag‐and‐drop zone */
+      #uploadCsvModal #drop-zone {
+        border: 2px dashed #999;
+        border-radius: 4px;
+        padding: 30px;
+        text-align: center;
+        color: #666;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+      }
+      #uploadCsvModal #drop-zone.dragover {
+        background: #f0f0f0;
+        border-color: #666;
+      }
+
+      /* Hidden file input */
+      #uploadCsvModal input[type="file"] {
+        display: none;
+      }
+
+      /* File‐info text (shows filename) */
+      #uploadCsvModal #file-info {
+        margin-top: 10px;
+        font-style: italic;
+        color: #333;
+      }
+
+      /* “Import” button styling */
+      #uploadCsvModal .button-import {
+        margin-top: 15px;
+      }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    <div id="uploadCsvModalBackdrop"></div>
+
+    <div id="uploadCsvModal">
+      <div class="modal-header">
+        <h2>{% trans "Upload CSV" %}</h2>
+        <span class="modal-close" id="closeUploadModal">&times;</span>
+      </div>
+
+      <form 
+        method="post" 
+        action="{% url 'admin:food_order_api_menuitem_upload_csv' %}"
+        enctype="multipart/form-data"
+        id="uploadCsvForm"
+      >
+        {% csrf_token %}
+
+        <div id="drop-zone">
+          <p id="drop-zone-text">{% trans "Drag & drop CSV file here, or click to select." %}</p>
+          <input type="file" name="csv_file" id="csvFileInput" accept=".csv" />
+        </div>
+
+        {# This div will show the filename once a file is chosen or dropped #}
+        <div id="file-info"></div>
+
+        <button 
+          type="submit" 
+          class="button button-import" 
+          disabled 
+          id="importCsvButton"
+        >
+          {% trans "Import" %}
+        </button>
+      </form>
+    </div>
+
+    <script>
+    (function() {
+      const uploadBtn = document.getElementById("upload-csv-button");
+      const modal      = document.getElementById("uploadCsvModal");
+      const backdrop   = document.getElementById("uploadCsvModalBackdrop");
+      const closeBtn   = document.getElementById("closeUploadModal");
+      const dropZone   = document.getElementById("drop-zone");
+      const dropText   = document.getElementById("drop-zone-text");
+      const fileInfo   = document.getElementById("file-info");
+      const fileInput  = document.getElementById("csvFileInput");
+      const importBtn  = document.getElementById("importCsvButton");
+
+      // Open modal
+      uploadBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        modal.style.display    = "block";
+        backdrop.style.display = "block";
+      });
+
+      // Close modal
+      closeBtn.addEventListener("click", closeModal);
+      backdrop.addEventListener("click", closeModal);
+
+      function closeModal() {
+        modal.style.display    = "none";
+        backdrop.style.display = "none";
+        // Reset form + visuals
+        fileInput.value = "";
+        importBtn.disabled = true;
+        dropZone.classList.remove("dragover");
+        dropText.textContent = "{% trans 'Drag & drop CSV file here, or click to select.' %}";
+        fileInfo.textContent = "";
+      }
+
+      // Click on dropZone forwards to file input
+      dropZone.addEventListener("click", function() {
+        fileInput.click();
+      });
+
+      // Highlight on dragover
+      dropZone.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add("dragover");
+      });
+
+      dropZone.addEventListener("dragleave", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove("dragover");
+      });
+
+      // Handle file drop
+      dropZone.addEventListener("drop", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove("dragover");
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          // Only accept first file
+          fileInput.files = files;
+          const fname = files[0].name;
+          dropText.textContent = "{% trans 'Selected file:' %} " + fname;
+          fileInfo.textContent = "";
+          importBtn.disabled = false;
+        }
+      });
+
+      // If user chooses file via dialog
+      fileInput.addEventListener("change", function() {
+        if (fileInput.files.length > 0) {
+          const fname = fileInput.files[0].name;
+          dropText.textContent = "{% trans 'Selected file:' %} " + fname;
+          fileInfo.textContent = "";
+          importBtn.disabled = false;
+        } else {
+          dropText.textContent = "{% trans 'Drag & drop CSV file here, or click to select.' %}";
+          fileInfo.textContent = "";
+          importBtn.disabled = true;
+        }
+      });
+    })();
+    </script>
+{% endblock %}
