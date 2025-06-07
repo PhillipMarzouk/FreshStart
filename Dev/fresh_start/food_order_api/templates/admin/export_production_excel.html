@@ -1,0 +1,9 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+  <h2>Export Production Excel</h2>
+  <form method="get" action="">
+      <label for="date">Select Delivery Date:</label>
+      <input type="date" id="date" name="date" required>
+      <button type="submit" class="button">Export</button>
+  </form>
+{% endblock %}
